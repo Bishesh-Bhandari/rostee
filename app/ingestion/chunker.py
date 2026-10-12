@@ -96,4 +96,4 @@ class TextChunker:
             pos = text.rfind(sep, earliest, end)
             if pos != -1:
                 return pos + len(sep)
-        return end  # No boundary at all (e.g. a long URL): hard cut.
+        return end  # No boundary at all (e.g. a long URL): hard cut.x

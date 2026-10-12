@@ -2,7 +2,8 @@
 __pycache__/
 *.pyc
 .env
-data/uploads/
-data/qdrant/
+
+data/
+
 .pytest_cache/
 .vscode/

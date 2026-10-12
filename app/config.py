@@ -38,7 +38,10 @@ class Settings(BaseSettings):
     dense_dim: int = Field(default=384, gt=0)
     sparse_model: str = "Qdrant/bm25"
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-
+    # fixed download folder so models arent redowloaded lovely
+    # cleaning its temp folder and so docker can bake them into the images
+    models_cache_dir: Path = Path("data/models")  
+    
     # --- Chunking (measured in characters, not tokens) ---
     # ~800 chars ≈ 200 tokens: small enough to stay well under the embedder's
     # 512-token limit, big enough to hold a full policy clause.

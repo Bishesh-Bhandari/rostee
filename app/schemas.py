@@ -54,6 +54,31 @@ class Chunk:
         key = f"{self.file_name}:{self.page_number}:{self.index}"
         return str(uuid.uuid5(uuid.NAMESPACE_URL, key))
 
+@dataclass(frozen = True , slots = True)
+class SparseVector:
+    """ keyword vector storing only non zero entries ok 
+    
+    Attribtes:
+    indices:Vocabulary ids of the temrms present
+    values:wieght of each term same order as indices 
+
+    """
+
+    indices : tuple[int, ...]
+    values:tuple[float, ...]
+
+@dataclass(frozen =True ,slots = True)
+class Embedding:
+    """Both vectors for one piece of text
+    
+    
+    Attributs :
+    
+       dense :semantic vector ( lengthn of the vector vary with the types of dense model dimensiions)
+       """
+
+    dense : tuple[float,...]
+    sparse: SparseVector
 
 @dataclass(frozen=True, slots=True)
 class SearchHit:
