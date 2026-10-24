@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pymupdf
 
+from app.ingestion.chunker import TextChunker
+from app.ingestion.loader import PdfLoader
 from app.pipeline import RagPipeline
 
 logging.basicConfig(level=logging.INFO)  # so we see the pipeline's log line
@@ -19,6 +21,7 @@ with tempfile.TemporaryDirectory() as tmp:
     doc.save(sample)
     doc.close()
 
-    pipeline = RagPipeline()
-    for page in pipeline.ingest(sample):
-        print(page)
+    # Small chunk size so even this short PDF shows the split + overlap.
+    pipeline = RagPipeline(loader=PdfLoader(), chunker=TextChunker(chunk_size=20, chunk_overlap=5))
+    for chunk in pipeline.ingest(sample):
+        print(chunk)
