@@ -5,9 +5,9 @@ from pathlib import Path
 
 from app.config import Settings
 from app.core.embedder import Embedder
+from app.core.store import QdrantStore
 from app.ingestion.chunker import TextChunker
 from app.ingestion.loader import PdfLoader
-from app.schemas import Embedding
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,13 @@ class RagPipeline:
     (like loading models) never happens per request.
     """
 
-    def __init__(self, loader: PdfLoader, chunker: TextChunker, embedder: Embedder) -> None:
+    def __init__(
+        self,
+        loader: PdfLoader,
+        chunker: TextChunker,
+        embedder: Embedder,
+        store: QdrantStore,
+    ) -> None:
         """Wire up ready-made engines.
 
         Use `from_settings()` in the app. Pass engines directly in tests, so a
@@ -29,10 +35,12 @@ class RagPipeline:
             loader: Reads PDFs into pages.
             chunker: Splits pages into chunks.
             embedder: Turns chunk texts into dense + sparse vectors.
+            store: Saves chunks with their vectors and searches them.
         """
         self._loader = loader
         self._chunker = chunker
         self._embedder = embedder
+        self._store = store
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "RagPipeline":
@@ -53,19 +61,27 @@ class RagPipeline:
                 dense_dim=settings.dense_dim,
                 cache_dir=settings.models_cache_dir,
             ),
+            store=QdrantStore(
+                path=settings.qdrant_path,
+                collection_name=settings.collection_name,
+                dense_dim=settings.dense_dim,
+            ),
         )
 
-    def ingest(self, path: Path) -> list[Embedding]:
-        """Load, chunk and embed a PDF so it can be searched later.
+    def ingest(self, path: Path) -> int:
+        """Make a PDF searchable: load, chunk, embed and store it.
+
+        Re-ingesting a file with the same name replaces its old chunks.
 
         Args:
             path: Path to a .pdf file already saved on disk.
 
         Returns:
-            One embedding per chunk (temporary, until storing is added).
+            Number of chunks stored.
         """
         pages = self._loader.load(path)
         chunks = self._chunker.chunk(pages)
         embeddings = self._embedder.embed_documents([chunk.text for chunk in chunks])
-        logger.info("%s: %d pages -> %d chunks", path.name, len(pages), len(chunks))
-        return embeddings
+        self._store.add(chunks, embeddings)
+        logger.info("%s: %d pages -> %d chunks stored", path.name, len(pages), len(chunks))
+        return len(chunks)

@@ -8,6 +8,7 @@ import pymupdf
 
 from app.config import get_settings
 from app.core.embedder import Embedder
+from app.core.store import QdrantStore
 from app.ingestion.chunker import TextChunker
 from app.ingestion.loader import PdfLoader
 from app.pipeline import RagPipeline
@@ -15,6 +16,9 @@ from app.pipeline import RagPipeline
 logging.basicConfig(level=logging.INFO)  # so we see the pipeline's log line
 
 settings = get_settings()
+
+# A separate collection so test runs never mix with real uploaded documents.
+store = QdrantStore(settings.qdrant_path, "test_pipeline", settings.dense_dim)
 
 with tempfile.TemporaryDirectory() as tmp:
     sample = Path(tmp) / "return_policy.pdf"
@@ -36,12 +40,14 @@ with tempfile.TemporaryDirectory() as tmp:
             dense_dim=settings.dense_dim,
             cache_dir=settings.models_cache_dir,
         ),
+        store=store,
     )
-    embeddings = pipeline.ingest(sample)
 
-    # Vectors are too long to print whole, so show their shape instead.
-    for i, emb in enumerate(embeddings):
-        print(f"chunk {i}: dense dim={len(emb.dense)}, sparse terms={len(emb.sparse.indices)}")
-    assert len(embeddings) == 6, f"expected 6 embeddings (one per chunk), got {len(embeddings)}"
-    assert all(len(e.dense) == settings.dense_dim for e in embeddings)
+    stored = pipeline.ingest(sample)
+    assert stored == 6, f"expected 6 chunks stored, got {stored}"
+    assert store.count() == 6, f"expected 6 points in the store, got {store.count()}"
+
+    # Ingesting the same file again must replace its chunks, not duplicate them.
+    pipeline.ingest(sample)
+    assert store.count() == 6, f"re-ingest duplicated chunks: {store.count()} points"
     print("OK: all checks passed")
