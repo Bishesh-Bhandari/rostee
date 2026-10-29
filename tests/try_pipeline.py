@@ -8,6 +8,8 @@ import pymupdf
 
 from app.config import get_settings
 from app.core.embedder import Embedder
+from app.core.generator import Generator
+from app.core.reranker import Reranker
 from app.core.store import QdrantStore
 from app.ingestion.chunker import TextChunker
 from app.ingestion.loader import PdfLoader
@@ -41,6 +43,8 @@ with tempfile.TemporaryDirectory() as tmp:
             cache_dir=settings.models_cache_dir,
         ),
         store=store,
+        reranker=Reranker(settings.reranker_model, settings.models_cache_dir),
+        generator=Generator(settings.gemini_api_key.get_secret_value(), settings.llm_model),
     )
 
     stored = pipeline.ingest(sample)

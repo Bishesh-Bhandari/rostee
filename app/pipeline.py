@@ -5,6 +5,8 @@ from pathlib import Path
 
 from app.config import Settings
 from app.core.embedder import Embedder
+from app.core.generator import Generator
+from app.core.reranker import Reranker
 from app.core.store import QdrantStore
 from app.ingestion.chunker import TextChunker
 from app.ingestion.loader import PdfLoader
@@ -25,6 +27,8 @@ class RagPipeline:
         chunker: TextChunker,
         embedder: Embedder,
         store: QdrantStore,
+        reranker: Reranker,
+        generator: Generator,
     ) -> None:
         """Wire up ready-made engines.
 
@@ -36,11 +40,15 @@ class RagPipeline:
             chunker: Splits pages into chunks.
             embedder: Turns chunk texts into dense + sparse vectors.
             store: Saves chunks with their vectors and searches them.
+            reranker: Re-scores search hits and keeps the best ones.
+            generator: Writes the final answer from the best chunks.
         """
         self._loader = loader
         self._chunker = chunker
         self._embedder = embedder
         self._store = store
+        self._reranker = reranker
+        self._generator = generator
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "RagPipeline":
@@ -65,6 +73,15 @@ class RagPipeline:
                 path=settings.qdrant_path,
                 collection_name=settings.collection_name,
                 dense_dim=settings.dense_dim,
+            ),
+            reranker=Reranker(
+                model=settings.reranker_model,
+                cache_dir=settings.models_cache_dir,
+            ),
+            generator=Generator(
+                # Unwrap the SecretStr only here, where the real key is needed.
+                api_key=settings.gemini_api_key.get_secret_value(),
+                model=settings.llm_model,
             ),
         )
 
