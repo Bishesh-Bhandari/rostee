@@ -45,6 +45,8 @@ with tempfile.TemporaryDirectory() as tmp:
         store=store,
         reranker=Reranker(settings.reranker_model, settings.models_cache_dir),
         generator=Generator(settings.gemini_api_key.get_secret_value(), settings.llm_model),
+        retrieve_top_k=settings.retrieve_top_k,
+        rerank_top_k=settings.rerank_top_k,
     )
 
     stored = pipeline.ingest(sample)
@@ -54,4 +56,18 @@ with tempfile.TemporaryDirectory() as tmp:
     # Ingesting the same file again must replace its chunks, not duplicate them.
     pipeline.ingest(sample)
     assert store.count() == 6, f"re-ingest duplicated chunks: {store.count()} points"
-    print("OK: all checks passed")
+
+    # Answerable: the PDF says 14 days, so the answer must cite it.
+    answer = pipeline.ask("How many days do I have to return an item?")
+    print(f"\nQ1 answer: {answer.text}")
+    print(f"Q1 sources: {[(c.file_name, c.page_number) for c in answer.sources]}")
+    assert "14" in answer.text, "answer should mention 14 days"
+    assert answer.sources, "an answer from the documents must cite a source"
+
+    # Not answerable: nothing about prices in the PDF, so no guessing, no sources.
+    answer = pipeline.ask("How much does it cost to rent a tent?")
+    print(f"\nQ2 answer: {answer.text}")
+    print(f"Q2 sources: {[(c.file_name, c.page_number) for c in answer.sources]}")
+    assert not answer.sources, "a 'not found' answer must not cite sources"
+
+    print("\nOK: all checks passed")

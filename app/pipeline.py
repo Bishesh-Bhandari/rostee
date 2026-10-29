@@ -10,6 +10,7 @@ from app.core.reranker import Reranker
 from app.core.store import QdrantStore
 from app.ingestion.chunker import TextChunker
 from app.ingestion.loader import PdfLoader
+from app.schemas import Answer
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,8 @@ class RagPipeline:
         store: QdrantStore,
         reranker: Reranker,
         generator: Generator,
+        retrieve_top_k: int,
+        rerank_top_k: int,
     ) -> None:
         """Wire up ready-made engines.
 
@@ -42,6 +45,8 @@ class RagPipeline:
             store: Saves chunks with their vectors and searches them.
             reranker: Re-scores search hits and keeps the best ones.
             generator: Writes the final answer from the best chunks.
+            retrieve_top_k: How many candidates search returns.
+            rerank_top_k: How many of those the reranker keeps for the answer.
         """
         self._loader = loader
         self._chunker = chunker
@@ -49,6 +54,8 @@ class RagPipeline:
         self._store = store
         self._reranker = reranker
         self._generator = generator
+        self._retrieve_top_k = retrieve_top_k
+        self._rerank_top_k = rerank_top_k
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "RagPipeline":
@@ -83,6 +90,8 @@ class RagPipeline:
                 api_key=settings.gemini_api_key.get_secret_value(),
                 model=settings.llm_model,
             ),
+            retrieve_top_k=settings.retrieve_top_k,
+            rerank_top_k=settings.rerank_top_k,
         )
 
     def ingest(self, path: Path) -> int:
@@ -102,3 +111,27 @@ class RagPipeline:
         self._store.add(chunks, embeddings)
         logger.info("%s: %d pages -> %d chunks stored", path.name, len(pages), len(chunks))
         return len(chunks)
+
+    def ask(self, question: str) -> Answer:
+        """Answer a question from the ingested documents, with citations.
+
+        Args:
+            question: The user's question.
+
+        Returns:
+            The answer text and the chunks it cited. Sources are empty when
+            the documents don't contain the answer.
+
+        Raises:
+            RuntimeError: If the LLM call fails (bad key, quota, outage).
+        """
+        query = self._embedder.embed_query(question)
+        hits = self._store.search(query, limit=self._retrieve_top_k)
+        best = self._reranker.rerank(question, hits, top_k=self._rerank_top_k)
+        answer = self._generator.answer(question, best)
+        # Counts only, never the question text: it may contain private data.
+        logger.info(
+            "Answered: %d hits -> %d reranked -> %d cited",
+            len(hits), len(best), len(answer.sources),
+        )
+        return answer
