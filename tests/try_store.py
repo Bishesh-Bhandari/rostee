@@ -33,3 +33,9 @@ for question in ["what is the refund policy?", "price of SB-15X"]:
 new_prices = [Chunk("price_list.pdf", 1, 0, "Sleeping bag SB-15X now rents for $5 per day.")]
 store.add(new_prices, embedder.embed_documents([c.text for c in new_prices]))
 print("\nAfter re-upload, stored:", store.count(), "(expected 3)")
+
+# close() must release the folder lock, so a fresh store can open it again.
+store.close()
+reopened = QdrantStore(s.qdrant_path, "test_documents", s.dense_dim)
+print("After close + reopen, stored:", reopened.count(), "(expected 3)")
+reopened.close()

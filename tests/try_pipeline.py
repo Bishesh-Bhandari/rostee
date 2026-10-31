@@ -70,4 +70,7 @@ with tempfile.TemporaryDirectory() as tmp:
     print(f"Q2 sources: {[(c.file_name, c.page_number) for c in answer.sources]}")
     assert not answer.sources, "a 'not found' answer must not cite sources"
 
+    # Release the folder lock now instead of leaving it to Qdrant's __del__ at exit.
+    pipeline.close()
+
     print("\nOK: all checks passed")

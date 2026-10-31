@@ -103,6 +103,15 @@ class QdrantStore:
         """Return how many chunks are stored (useful for health checks)."""
         return self._client.count(collection_name=self._name).count
 
+    def close(self) -> None:
+        """Release the storage folder so another QdrantStore can open it.
+
+        Local Qdrant locks its folder while a client is open. Call this on
+        app shutdown, or the next start may find the folder still locked.
+        """
+        self._client.close()
+        logger.info("Closed store '%s'", self._name)
+
     def _ensure_collection(self, dense_dim: int) -> None:
         """Create the collection if missing; check its size if it exists."""
         if self._client.collection_exists(self._name):

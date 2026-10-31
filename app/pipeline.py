@@ -135,3 +135,10 @@ class RagPipeline:
             len(hits), len(best), len(answer.sources),
         )
         return answer
+
+    def close(self) -> None:
+        """Release resources that outlive a request (the store's folder lock).
+
+        Call once on app shutdown. The pipeline can't be used afterwards.
+        """
+        self._store.close()
