@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     collection_name: str = "documents"
     upload_dir: Path = Path("data/uploads")
 
+    # --- API ---
+    # Websites allowed to call the API from a browser. "*" = any site, fine
+    # while there's no login; set the client's frontend URL before going live.
+    # In .env it's JSON: CORS_ORIGINS=["https://client-site.com"]
+    cors_origins: list[str] = ["*"]
+
     @model_validator(mode="after")
     def _check_consistency(self) -> "Settings":
         """Catch settings that are valid alone but broken together."""

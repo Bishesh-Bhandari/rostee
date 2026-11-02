@@ -136,6 +136,10 @@ class RagPipeline:
         )
         return answer
 
+    def count(self) -> int:
+        """Return how many chunks are searchable (for health checks)."""
+        return self._store.count()
+
     def close(self) -> None:
         """Release resources that outlive a request (the store's folder lock).
 
