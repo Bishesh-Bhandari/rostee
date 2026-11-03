@@ -44,7 +44,7 @@ class AskRequest(BaseModel):
 
 
 class Source(BaseModel):
-    """One cited chunk, enough for the frontend to show a citation."""
+    """One cited chunk: enough for the frontend to show a citation."""
 
     file_name: str
     page_number: int
@@ -100,6 +100,7 @@ def upload_document(request: Request, file: UploadFile) -> UploadResponse:
     """
     # The name is a label the client wrote, so it can't be trusted: keep only
     # the bare file name, or "../../app/config.py" would write outside the folder.
+    # `or ""` because a client may send no name at all, and Path(None) crashes.
     file_name = Path(file.filename or "").name
     if not file_name:
         raise HTTPException(status_code=400, detail="Upload has no file name.")
@@ -114,7 +115,8 @@ def upload_document(request: Request, file: UploadFile) -> UploadResponse:
         chunks = request.app.state.pipeline.ingest(path)
     except ValueError as e:
         # Loader errors (not a PDF, scanned, password protected) are the
-        # user's to fix, so their message goes back as-is.
+        # user's to fix, so their message goes back as-is. The rejected file
+        # is deleted so the upload folder doesn't fill up with junk.
         path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=str(e)) from e
     return UploadResponse(file_name=file_name, chunks=chunks)
@@ -136,6 +138,7 @@ def ask(request: Request, body: AskRequest) -> AskResponse:
         raise HTTPException(
             status_code=502, detail="The answer service is unavailable. Try again shortly."
         ) from e
+    # Convert the internal dataclass into the API's pydantic shape.
     return AskResponse(
         answer=answer.text,
         sources=[
