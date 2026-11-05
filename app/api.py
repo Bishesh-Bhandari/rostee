@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.config import get_settings
@@ -146,3 +147,10 @@ def ask(request: Request, body: AskRequest) -> AskResponse:
             for c in answer.sources
         ],
     )
+
+
+# Serves frontend/ at "/". Same origin as the API, so the page needs no CORS.
+# Must stay last: a mount at "/" matches every path, and routes are tried in
+# the order they were added, so anything registered after it would be hidden.
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+app.mount("/", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rostee</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>rostee</h1>
+    <p class="tagline">Ask questions about your documents.</p>
+    <span id="status" class="status">Checking server…</span>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Upload a PDF</h2>
+      <form id="upload-form">
+        <input type="file" id="file" accept=".pdf,application/pdf" required>
+        <button type="submit">Upload</button>
+      </form>
+      <p id="upload-result" class="result" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
+      <h2>2. Ask a question</h2>
+      <form id="ask-form">
+        <textarea id="question" rows="3" placeholder="e.g. What is the refund policy?" required></textarea>
+        <button type="submit">Ask</button>
+      </form>
+      <div id="answer" class="answer" aria-live="polite"></div>
+      <ol id="sources" class="sources"></ol>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
