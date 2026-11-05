@@ -31,7 +31,8 @@ class Generator:
 
     Chunks are shown to the model as numbered sources. The numbers the model
     actually cites decide which chunks are returned as sources, so the user
-    only sees citations for what the answer really used.
+    only sees citations for what the answer really used. The markers are then
+    renumbered to match the returned list.
     """
 
     def __init__(self, api_key: str, model: str) -> None:
@@ -78,7 +79,7 @@ class Generator:
         if not text:
             # Happens when Gemini's safety filter blocks the reply.
             text = "Sorry, I couldn't generate an answer to that. Try rephrasing the question."
-        sources = self._cited_sources(text, hits)
+        text, sources = self._keep_cited(text, hits)
         logger.info("Generated answer citing %d of %d source(s)", len(sources), len(hits))
         return Answer(text=text, sources=sources)
 
@@ -94,11 +95,22 @@ class Generator:
         return f"Sources:\n\n{sources}\n\nQuestion: {question}"
 
     @staticmethod
-    def _cited_sources(text: str, hits: list[SearchHit]) -> tuple[Chunk, ...]:
-        """Return the chunks the answer cited, in source order, without duplicates.
+    def _keep_cited(text: str, hits: list[SearchHit]) -> tuple[str, tuple[Chunk, ...]]:
+        """Keep only the cited chunks and renumber the markers to match them.
 
-        Numbers outside the source list (a model hallucinating [9] when only
-        5 sources exist) are ignored.
+        Without renumbering, an answer citing [2] and [4] would come back with
+        a 2-item source list, so "[4]" would point at nothing. Numbers outside
+        the source list (a model hallucinating [9] when only 5 sources exist)
+        are ignored and left as they are.
+
+        Returns:
+            The answer text with renumbered markers, and the cited chunks in
+            source order, without duplicates.
         """
         cited = {int(n) for n in _CITATION.findall(text)}
-        return tuple(hit.chunk for n, hit in enumerate(hits, start=1) if n in cited)
+        kept = [n for n in range(1, len(hits) + 1) if n in cited]
+        new_number = {old: new for new, old in enumerate(kept, start=1)}
+        text = _CITATION.sub(
+            lambda m: f"[{new_number.get(int(m.group(1)), m.group(1))}]", text
+        )
+        return text, tuple(hits[n - 1].chunk for n in kept)
