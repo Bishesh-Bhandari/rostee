@@ -1,0 +1,35 @@
+[
+ {"id":"M1","level":"L2","kind":"mcq","question":"Before cloud, on-premises servers typically ran at what capacity? A) 10-15% B) 30-50% C) 60-70% D) 99.9%","answer":"A","pages":[3]},
+ {"id":"M2","level":"L2","kind":"mcq","question":"Which is NOT one of the five NIST essential characteristics? A) Rapid elasticity B) Measured service C) Automated disaster recovery D) Resource pooling","answer":"C","pages":[4,5]},
+ {"id":"M3","level":"L3","kind":"mcq","question":"Which is NOT a dimension of the Jericho Cloud Cube? A) Internal/External B) Insourced/Outsourced C) Centralized/Decentralized D) Proprietary/Open","answer":"C","pages":[26,27]},
+ {"id":"M4","level":"L3","kind":"mcq","question":"Which deployment model lists slow data transmission as a disadvantage? A) Private B) Hybrid C) Community D) Multi-cloud","answer":"B","pages":[23]},
+ {"id":"M5","level":"L3","kind":"mcq","question":"Which is a stated drawback of vertical scaling? A) Needs a load balancer B) Limited by maximum instance size C) Needs stateless design D) Needs database partitioning","answer":"B","pages":[10,11]},
+ {"id":"M6","level":"L3","kind":"mcq","question":"How does multi-cloud differ from hybrid cloud? A) Multi uses many public clouds; hybrid mixes private and public B) Multi is only on-premises C) Hybrid uses many providers D) No difference","answer":"A","pages":[24]},
+ {"id":"M7","level":"L2","kind":"mcq","question":"When did AWS launch EC2 and S3? A) 2004 B) 2006 C) 2008 D) 2010","answer":"B","pages":[15]},
+ {"id":"M8","level":"L4","kind":"mcq","question":"A bank must keep customer data in its own controlled environment but wants to rent public capacity for busy seasons. Best fit? A) Public B) Private C) Hybrid D) Community","answer":"C","pages":[22,23]},
+ {"id":"M9","level":"L3","kind":"mcq","question":"Which is listed as a SaaS disadvantage? A) You manage the OS B) No control over infrastructure or security controls C) Requires hands-on configuration D) Highest control","answer":"B","pages":[18]},
+ {"id":"M10","level":"L2","kind":"mcq","question":"Which example does the notes give for the public cloud? A) Google App Engine B) Azure Stack C) VMware vCloud D) OpenStack","answer":"A","pages":[20]},
+
+ {"id":"W1","level":"L1","kind":"written","question":"What does the shift from CapEx to OpEx mean?","keywords":["capital","operational"],"pages":[3]},
+ {"id":"W2","level":"L2","kind":"written","question":"List the deployment models in the notes.","keywords":["public","private","hybrid","community","multi"],"pages":[20]},
+ {"id":"W3","level":"L3","kind":"written","question":"What audits does a Cloud Auditor do?","keywords":["security","privacy","performance","compliance"],"pages":[9,10]},
+ {"id":"W4","level":"L3","kind":"written","question":"What are the zero trust principles?","keywords":["verify","least privilege","assume breach"],"pages":[12,13]},
+ {"id":"W5","level":"L3","kind":"written","question":"What techniques are listed under Retry Mechanisms?","keywords":["backoff","jitter","dead letter"],"pages":[11]},
+ {"id":"W6","level":"L3","kind":"written","question":"What house analogy is used for IaaS, PaaS and SaaS?","keywords":["contractor","furnished","finished"],"pages":[16,17,18]},
+ {"id":"W7","level":"L4","kind":"written","question":"Compare public and private cloud on security, customization, scalability and cost.","keywords":["secur","customiz","scalab","cost"],"pages":[20,21,22]},
+ {"id":"W8","level":"L4","kind":"written","question":"What factors decide the deployment model, and is there one best?","keywords":["cost","scalab","easy","compliance","privacy"],"pages":[25,26]},
+ {"id":"W9","level":"L3","kind":"written","question":"What are the steps to secure data with the Cloud Cube Model?","keywords":["classif","trust"],"pages":[26,27]},
+ {"id":"W10","level":"L3","kind":"written","question":"Which era does the notes put Docker in, and what else belongs there?","keywords":["2011","hybrid"],"pages":[15]},
+
+ {"id":"X1","level":"T","kind":"trap","trap":"refuse","question":"How does a Type 1 hypervisor differ from Type 2?"},
+ {"id":"X2","level":"T","kind":"trap","trap":"refuse","question":"How do I fix serverless cold starts?"},
+ {"id":"X3","level":"T","kind":"trap","trap":"correct","any_of":["five","5"],"question":"The notes describe four deployment models. What are they?"},
+ {"id":"X4","level":"T","kind":"trap","trap":"refuse","question":"How much does an EC2 instance cost per hour?"},
+ {"id":"X5","level":"T","kind":"trap","trap":"refuse","question":"Why do the notes say vertical scaling beats horizontal?"},
+ {"id":"X6","level":"T","kind":"trap","trap":"refuse","question":"What do the notes say about quantum computing?"},
+ {"id":"X7","level":"T","kind":"trap","trap":"no_sources","question":"hey, who are you?"},
+ {"id":"X8","level":"T","kind":"trap","trap":"no_sources","question":"Who won the 2022 World Cup?"},
+
+ {"id":"I1","level":"L3","kind":"image","question":"In the responsibility breakdown table, who handles virtualization, storage and networking in IaaS?","keywords":["provider"],"pages":[19]},
+ {"id":"I2","level":"L4","kind":"image","question":"In the NIST architecture diagram, what three things sit under Cloud broker?","keywords":["intermediation","aggregation","arbitrage"],"pages":[8]}
+]
