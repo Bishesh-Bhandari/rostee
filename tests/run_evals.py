@@ -11,6 +11,8 @@ import httpx
 
 ASK_PATH = "/ask"   # your endpoint name; check /docs if yours differs
 PAGE_OFFSET = 0     # set to 1 if rostee shows pages counted from 0
+# Only citations from this file count as a page hit: other uploads reuse page numbers.
+EVAL_DOC = "Cloud Computing and Virtulization Unit 1 Notes.pdf"
 # Must match how your generator words a refusal; copy from a real refusal.
 REFUSAL_PHRASES = ("couldn't find", "could not find", "not in the", "no information",
                    "not covered", "doesn't mention", "does not mention", "not mentioned")
@@ -43,6 +45,7 @@ class Reply:
     pages: tuple[int, ...]
     seconds: float
     error: str = ""
+    source_count: int = 0           # all sources, from any file
 
 
 class RosteeClient:
@@ -59,8 +62,12 @@ class RosteeClient:
         except httpx.HTTPError as exc:
             return Reply("", (), time.perf_counter() - start, str(exc))
         data = resp.json()
-        pages = tuple(sorted({s["page_number"] + PAGE_OFFSET for s in data.get("sources", [])}))
-        return Reply(data.get("answer", ""), pages, time.perf_counter() - start)
+        sources = data.get("sources", [])
+        pages = tuple(sorted({s["page_number"] + PAGE_OFFSET for s in sources
+                              if s["file_name"] == EVAL_DOC}))
+        # Gemini sometimes writes ’ for ', which would hide a refusal from the phrase check.
+        text = data.get("answer", "").replace("’", "'")
+        return Reply(text, pages, time.perf_counter() - start, source_count=len(sources))
 
 
 class EvalGrader:
@@ -81,7 +88,7 @@ class EvalGrader:
             return bool(m) and (m.group(1) or m.group(2)) == case.answer
         if case.kind == "trap":
             if case.trap == "no_sources":
-                return not reply.pages
+                return reply.source_count == 0
             if case.trap == "correct":
                 return any(w in text for w in case.any_of)
             return any(p in text for p in REFUSAL_PHRASES)
