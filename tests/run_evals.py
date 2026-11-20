@@ -114,7 +114,9 @@ class EvalRunner:
                 "id": case.id, "level": case.level, "answer_ok": ok,
                 "page_ok": "" if page_ok is None else page_ok,
                 "made_up": 0,  # NOT measured automatically, review by hand
-                "seconds": f"{reply.seconds:.1f}", "notes": reply.error,
+                # error is for the script, notes is for your hand review: kept apart so a
+                # note you type never makes the report skip the row as a server error.
+                "seconds": f"{reply.seconds:.1f}", "error": reply.error, "notes": "",
                 "needs_review": int(ok == 0), "pages_cited": ",".join(map(str, reply.pages)),
                 "answer": reply.text.replace("\n", " "),
             })

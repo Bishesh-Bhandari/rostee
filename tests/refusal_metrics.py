@@ -1,10 +1,10 @@
 # tests/refusal_metrics.py
 """Refusal precision / recall / F1 from an eval CSV."""
-import csv
 import json
 import sys
 from pathlib import Path
 
+from tests.eval_report import load_results
 from tests.run_evals import REFUSAL_PHRASES
 
 
@@ -15,20 +15,23 @@ class RefusalMetrics:
     Precision = of the refusals rostee gave, how many were deserved.
     """
 
-    def __init__(self, csv_path: Path, evals_path: Path) -> None:
+    def __init__(self, csv_paths: list[Path], evals_path: Path) -> None:
         cases = {c["id"]: c for c in json.loads(evals_path.read_text(encoding="utf-8"))}
+        # A server error is not a refusal and not an answer, so it must not be scored.
+        rows, self._failed = load_results(csv_paths)
         self._rows: list[tuple[bool, bool]] = []
-        with csv_path.open(newline="", encoding="utf-8") as f:
-            for row in csv.DictReader(f):
-                case = cases[row["id"]]
-                # Chitchat and 'correct the premise' traps are neither answer nor refusal cases.
-                if case["kind"] == "trap" and case.get("trap") != "refuse":
-                    continue
-                should = case.get("trap") == "refuse"
-                did = any(p in row["answer"].lower() for p in REFUSAL_PHRASES)
-                self._rows.append((should, did))
+        for row in rows:
+            case = cases[row["id"]]
+            # Chitchat and 'correct the premise' traps are neither answer nor refusal cases.
+            if case["kind"] == "trap" and case.get("trap") != "refuse":
+                continue
+            should = case.get("trap") == "refuse"
+            did = any(p in row["answer"].lower() for p in REFUSAL_PHRASES)
+            self._rows.append((should, did))
 
     def print_summary(self) -> None:
+        if self._failed:
+            print(f"Not graded (server error): {', '.join(self._failed)}")
         tp = sum(1 for s, d in self._rows if s and d)
         fn = sum(1 for s, d in self._rows if s and not d)
         fp = sum(1 for s, d in self._rows if not s and d)
@@ -40,4 +43,4 @@ class RefusalMetrics:
 
 
 if __name__ == "__main__":
-    RefusalMetrics(Path(sys.argv[1]), Path("tests/evals.json")).print_summary()
+    RefusalMetrics([Path(p) for p in sys.argv[1:]], Path("tests/evals.json")).print_summary()
