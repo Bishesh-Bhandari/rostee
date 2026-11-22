@@ -37,11 +37,21 @@ class Settings(BaseSettings):
     dense_model: str = "BAAI/bge-small-en-v1.5"
     dense_dim: int = Field(default=384, gt=0)
     sparse_model: str = "Qdrant/bm25"
-    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    # Same weights as cross-encoder/ms-marco-MiniLM-L-6-v2, converted to ONNX.
+    reranker_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
     # fixed download folder so models arent redowloaded lovely
     # cleaning its temp folder and so docker can bake them into the images
-    models_cache_dir: Path = Path("data/models")  
-    
+    models_cache_dir: Path = Path("data/models")
+
+    # --- Model memory ---
+    # Tuned to fit a 512 MB host (Render free/starter). With fastembed's
+    # defaults (256 texts per batch, one thread per core) the container hit
+    # 2.1 GB after one upload. Measured in Docker after 1 upload + 5 questions:
+    # batch 16 / 2 threads -> 476 MB, batch 4 / 1 thread -> 412 MB, no slower.
+    # Raise both in .env on a machine with more RAM.
+    model_batch_size: int = Field(default=4, gt=0)  # texts per model call
+    model_threads: int = Field(default=1, gt=0)
+
     # --- Chunking (measured in characters, not tokens) ---
     # ~800 chars ≈ 200 tokens: small enough to stay well under the embedder's
     # 512-token limit, big enough to hold a full policy clause.

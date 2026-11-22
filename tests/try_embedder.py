@@ -10,7 +10,7 @@ from app.core.embedder import Embedder
 logging.basicConfig(level=logging.INFO)
 
 s = get_settings()
-embedder = Embedder(s.dense_model, s.sparse_model, s.dense_dim, s.models_cache_dir)
+embedder = Embedder(s.dense_model, s.sparse_model, s.dense_dim, s.models_cache_dir, s.model_threads, s.model_batch_size)
 
 docs = [
     "Customers can get their money back within 14 days.",

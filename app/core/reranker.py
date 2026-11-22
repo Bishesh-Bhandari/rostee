@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from sentence_transformers import CrossEncoder
+from fastembed.rerank.cross_encoder import TextCrossEncoder
 
 from app.schemas import SearchHit
 
@@ -17,17 +17,34 @@ class Reranker:
     chunk, which is fast but rough. A cross-encoder reads the question and the
     chunk together, so it is much more accurate but too slow to run over the
     whole collection. Using it only on the top search candidates gets both.
+
+    Runs on fastembed (ONNX Runtime), the same engine as the embedder, not on
+    sentence-transformers (PyTorch). Same model weights and same rankings, but
+    loading it took 180 MB of RAM instead of 493 MB, and torch leaves the
+    install entirely, which matters on a 512 MB cloud host.
     """
 
-    def __init__(self, model: str, cache_dir: Path) -> None:
+    def __init__(self, model: str, cache_dir: Path, threads: int, batch_size: int) -> None:
         """Load the cross-encoder (downloads it on first use).
 
         Args:
-            model: Hugging Face name of the cross-encoder model.
+            model: fastembed name of the cross-encoder model; only the ones in
+                TextCrossEncoder.list_supported_models() work.
             cache_dir: Folder where model files are downloaded and reused.
+            threads: CPU threads for the model; each one needs its own memory.
+            batch_size: (question, chunk) pairs scored per model call; bigger
+                is faster but raises peak memory, which ONNX Runtime keeps.
         """
         logger.info("Loading reranker model (first run downloads it)...")
-        self._model = CrossEncoder(model, cache_folder=str(cache_dir))
+        # Arena off: ONNX Runtime would otherwise keep its biggest-ever memory
+        # block forever, and each question grew RAM (to 1.5 GB after three).
+        self._model = TextCrossEncoder(
+            model_name=model,
+            cache_dir=str(cache_dir),
+            threads=threads,
+            enable_cpu_mem_arena=False,
+        )
+        self._batch_size = batch_size
 
     def rerank(self, question: str, hits: list[SearchHit], top_k: int) -> list[SearchHit]:
         """Score each hit against the question and keep the best ones.
@@ -44,7 +61,9 @@ class Reranker:
         """
         if not hits:
             return []
-        scores = self._model.predict([(question, hit.chunk.text) for hit in hits])
+        # One score per text, in the same order as the texts went in.
+        texts = [hit.chunk.text for hit in hits]
+        scores = list(self._model.rerank(question, texts, batch_size=self._batch_size))
         reranked = sorted(
             (SearchHit(chunk=hit.chunk, score=float(score)) for hit, score in zip(hits, scores, strict=True)),
             key=lambda hit: hit.score,

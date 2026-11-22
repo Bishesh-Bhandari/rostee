@@ -24,6 +24,8 @@ class Embedder:
         sparse_model: str,
         dense_dim: int,
         cache_dir: Path,
+        threads: int,
+        batch_size: int,
     ) -> None:
         """Load both models (downloads them on first use).
 
@@ -32,15 +34,28 @@ class Embedder:
             sparse_model: fastembed name of the keyword model.
             dense_dim: Expected dense vector length; must match the model.
             cache_dir: Folder where model files are downloaded and reused.
+            threads: CPU threads per model; each one needs its own memory.
+            batch_size: Texts embedded per model call; bigger is faster but
+                raises peak memory, which ONNX Runtime then keeps.
 
         Raises:
             ValueError: If the model's real dimension doesn't match dense_dim.
         """
         logger.info("Loading embedding models (first run downloads them)...")
-        self._dense = TextEmbedding(model_name=dense_model, cache_dir=str(cache_dir))
-        self._sparse = SparseTextEmbedding(model_name=sparse_model, cache_dir=str(cache_dir))
+        # Arena off: ONNX Runtime would otherwise keep its biggest-ever memory
+        # block forever, so RAM only grows. A little slower, far less memory.
+        self._dense = TextEmbedding(
+            model_name=dense_model,
+            cache_dir=str(cache_dir),
+            threads=threads,
+            enable_cpu_mem_arena=False,
+        )
+        self._sparse = SparseTextEmbedding(
+            model_name=sparse_model, cache_dir=str(cache_dir), threads=threads
+        )
         self._check_dimension(dense_model, dense_dim)
         self._dim = dense_dim
+        self._batch_size = batch_size
 
     def embed_documents(self, texts: list[str]) -> list[Embedding]:
         """Embed many stored passages (e.g. chunk texts) in batches.
@@ -53,8 +68,9 @@ class Embedder:
         """
         if not texts:
             return []
-        dense = self._dense.embed(texts)    # generators: computed in batches
-        sparse = self._sparse.embed(texts)
+        # Generators: computed batch by batch as the zip below pulls from them.
+        dense = self._dense.embed(texts, batch_size=self._batch_size)
+        sparse = self._sparse.embed(texts, batch_size=self._batch_size)
         embeddings = [self._to_embedding(d, s) for d, s in zip(dense, sparse, strict=True)]
         logger.info("Embedded %d text(s)", len(embeddings))
         return embeddings

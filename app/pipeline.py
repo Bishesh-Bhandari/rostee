@@ -75,6 +75,8 @@ class RagPipeline:
                 sparse_model=settings.sparse_model,
                 dense_dim=settings.dense_dim,
                 cache_dir=settings.models_cache_dir,
+                threads=settings.model_threads,
+                batch_size=settings.model_batch_size,
             ),
             store=QdrantStore(
                 path=settings.qdrant_path,
@@ -84,6 +86,8 @@ class RagPipeline:
             reranker=Reranker(
                 model=settings.reranker_model,
                 cache_dir=settings.models_cache_dir,
+                threads=settings.model_threads,
+                batch_size=settings.model_batch_size,
             ),
             generator=Generator(
                 # Unwrap the SecretStr only here, where the real key is needed.

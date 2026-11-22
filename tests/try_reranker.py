@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 s = get_settings()
-reranker = Reranker(s.reranker_model, s.models_cache_dir)
+reranker = Reranker(s.reranker_model, s.models_cache_dir, s.model_threads, s.model_batch_size)
 
 # Deliberately put the right answer LAST, as if search ranked it poorly.
 hits = [

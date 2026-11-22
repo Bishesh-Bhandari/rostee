@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 s = get_settings()
-embedder = Embedder(s.dense_model, s.sparse_model, s.dense_dim, s.models_cache_dir)
+embedder = Embedder(s.dense_model, s.sparse_model, s.dense_dim, s.models_cache_dir, s.model_threads, s.model_batch_size)
 store = QdrantStore(s.qdrant_path, "test_documents", s.dense_dim)
 
 chunks = [
