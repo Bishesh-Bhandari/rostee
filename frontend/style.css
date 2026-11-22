@@ -87,7 +87,8 @@ form {
   gap: 8px;
 }
 
-textarea {
+textarea,
+input[type="password"] {
   width: 100%;
   padding: 10px;
   font: inherit;
@@ -117,6 +118,24 @@ button:disabled {
 .answer {
   margin: 12px 0 0;
   white-space: pre-wrap;
+}
+
+.error {
+  color: var(--bad);
+}
+
+/* Log out sits in the header as a quiet text button, not a big blue one. */
+.logout {
+  display: inline;
+  margin-left: 12px;
+}
+
+button.link {
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  background: none;
+  text-decoration: underline;
 }
 
 .sources {

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rostee · log in</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>rostee</h1>
+    <p class="tagline">Ask questions about your documents.</p>
+  </header>
+
+  <main>
+    <section class="card login">
+      <h2>Log in</h2>
+      <!-- A plain form post: the server checks the password, sets the login
+           cookie and redirects, so this page works without any JavaScript. -->
+      <form method="post" action="/login">
+        <input type="password" name="password" placeholder="Password"
+               autocomplete="current-password" required autofocus>
+        <button type="submit">Log in</button>
+      </form>
+      <p id="error" class="result error" hidden>Wrong password. Try again.</p>
+    </section>
+  </main>
+
+  <!-- The server sends a wrong password back here as ?error=1. -->
+  <script>
+    if (new URLSearchParams(location.search).has("error")) {
+      document.getElementById("error").hidden = false;
+    }
+  </script>
+</body>
+</html>

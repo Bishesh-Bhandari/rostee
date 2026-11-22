@@ -1,16 +1,20 @@
 """HTTP API: exposes the RAG pipeline to a frontend over JSON."""
 
+import asyncio
 import logging
 import shutil
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.auth import SessionAuth
 from app.config import get_settings
 from app.pipeline import RagPipeline
 
@@ -69,12 +73,44 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     # Once here, not per upload: the folder doesn't vanish between requests.
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
+    app.state.auth = SessionAuth(
+        password=settings.app_password.get_secret_value(),
+        session_days=settings.session_days,
+    )
     app.state.pipeline = RagPipeline.from_settings(settings)
     yield
     app.state.pipeline.close()
 
 
 app = FastAPI(title="rostee", lifespan=lifespan)
+
+
+SESSION_COOKIE = "rostee_session"
+LOGIN_PAGE = "/login.html"
+# Reachable without logging in. /health: Render pings it to know the app is
+# alive. style.css: the login page needs it to look right. /logout: clicking
+# "Log out" after the login already expired should still land on the login
+# page, not on a raw 401.
+_PUBLIC_PATHS = {"/health", "/login", "/logout", LOGIN_PAGE, "/style.css"}
+
+
+# Registered before CORS on purpose: the last middleware added runs first,
+# so CORS answers browser preflight checks (which never carry a cookie)
+# before this check can reject them.
+@app.middleware("http")
+async def require_login(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """Let a request through only if it's public or carries a valid login cookie."""
+    token = request.cookies.get(SESSION_COOKIE, "")
+    if request.url.path in _PUBLIC_PATHS or request.app.state.auth.is_valid(token):
+        return await call_next(request)
+    # A person opening a page gets sent to the login form. The frontend's own
+    # fetch calls get a 401 instead, which app.js turns into that same redirect.
+    if request.method == "GET" and "text/html" in request.headers.get("accept", ""):
+        return RedirectResponse(LOGIN_PAGE, status_code=303)
+    return JSONResponse({"detail": "Not logged in."}, status_code=401)
+
 
 # Browsers block a page from calling an API on a different origin unless the
 # API allows it. Credentials stay off: with "*" they'd let any site send a
@@ -85,6 +121,46 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/login")
+async def login(request: Request, password: Annotated[str, Form()]) -> RedirectResponse:
+    """Check the login form; on success set the session cookie and go to the app.
+
+    A plain HTML form post, not JSON, so the login page needs no JavaScript.
+    303 makes the browser follow up with a GET, so refreshing the next page
+    doesn't resubmit the password.
+    """
+    token = request.app.state.auth.login(password)
+    if token is None:
+        # A one-second pause per wrong guess makes guessing slow. async sleep,
+        # not time.sleep: it pauses only this request, not the whole server.
+        await asyncio.sleep(1)
+        return RedirectResponse(f"{LOGIN_PAGE}?error=1", status_code=303)
+
+    response = RedirectResponse("/", status_code=303)
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=get_settings().session_days * 24 * 60 * 60,
+        # httponly: page JavaScript can't read it, so injected script can't steal it.
+        httponly=True,
+        # lax: other websites can't make your browser send it with a POST,
+        # so they can't upload or ask in your name.
+        samesite="lax",
+        # secure: only ever sent over HTTPS. Render's proxy does the HTTPS and
+        # tells us via x-forwarded-proto; local http://localhost stays usable.
+        secure=request.headers.get("x-forwarded-proto", request.url.scheme) == "https",
+    )
+    return response
+
+
+@app.post("/logout")
+def logout() -> RedirectResponse:
+    """Forget the session cookie and go back to the login page."""
+    response = RedirectResponse(LOGIN_PAGE, status_code=303)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
 
 
 @app.get("/health")
@@ -107,7 +183,19 @@ def upload_document(request: Request, file: UploadFile) -> UploadResponse:
         raise HTTPException(status_code=400, detail="Upload has no file name.")
 
     # get_settings() is cached, so this returns the startup instance for free.
-    path = get_settings().upload_dir / file_name
+    settings = get_settings()
+    # Checked before saving, so an oversized file never reaches the upload
+    # folder or the models. It has already landed in a temp file by now,
+    # though: stopping it at the door is a job for nginx in front of the app.
+    # `or 0`: size is None only if the client skipped multipart, never for a browser.
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    if (file.size or 0) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File is too big. The limit is {settings.max_upload_mb} MB.",
+        )
+
+    path = settings.upload_dir / file_name
     with path.open("wb") as out:
         # Copies in small pieces, so a big PDF never sits in memory all at once.
         shutil.copyfileobj(file.file, out)

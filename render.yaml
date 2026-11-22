@@ -1,0 +1,15 @@
+# Render blueprint: Render reads this file and sets the service up from it.
+# Dashboard -> New -> Blueprint -> pick this repo.
+services:
+  - type: web
+    name: rostee
+    runtime: docker          # builds the Dockerfile in this repo
+    plan: free               # 512 MB RAM; sleeps after 15 min idle
+    healthCheckPath: /health # the one page that needs no login
+    envVars:
+      # sync: false = no value in this file; Render asks you to type it in.
+      # Secrets never go in the repo.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: APP_PASSWORD
+        sync: false

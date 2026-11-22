@@ -1,0 +1,17 @@
+# `docker compose up --build` builds the image and starts rostee on http://localhost:8000
+services:
+  rostee:
+    build: .
+    ports:
+      - "8000:8000"   # your laptop's port : the container's port
+    # GEMINI_API_KEY is read from .env when the container starts. It is never
+    # copied into the image (.dockerignore blocks it).
+    env_file: .env
+    volumes:
+      # Uploads and the Qdrant index outlive the container: rebuild or
+      # restart and your documents are still there.
+      - rostee-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  rostee-data:

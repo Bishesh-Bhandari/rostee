@@ -1,0 +1,12 @@
+# Files Docker never sends to the build, so they can't end up in the image.
+# .env holds the Gemini key: an image with a key inside leaks it to anyone you share the image with.
+.env
+.venv/
+.git/
+# Models are downloaded fresh in the build; uploads and the index live in a volume.
+data/
+tests/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/

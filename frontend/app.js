@@ -25,6 +25,16 @@ async function checkHealth() {
   }
 }
 
+// The login cookie can expire while the page is open. The server then
+// answers 401, and the right move is the login page, not an error message.
+function redirectIfLoggedOut(res) {
+  if (res.status === 401) {
+    window.location.href = "/login.html";
+    return true;
+  }
+  return false;
+}
+
 // FastAPI sends `detail` as a string for our own 400s, but as a list for
 // validation errors (422), so both shapes need handling.
 function errorMessage(data) {
@@ -44,6 +54,7 @@ uploadForm.addEventListener("submit", async (event) => {
   uploadResult.textContent = "Uploading and indexing…";
   try {
     const res = await fetch("/documents", { method: "POST", body: form });
+    if (redirectIfLoggedOut(res)) return;
     const data = await res.json();
     if (res.ok) {
       uploadResult.textContent = `✅ ${data.file_name}: ${data.chunks} chunks ready to search`;
@@ -72,6 +83,7 @@ askForm.addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: questionInput.value }),
     });
+    if (redirectIfLoggedOut(res)) return;
     const data = await res.json();
     if (!res.ok) {
       answerEl.textContent = `❌ ${errorMessage(data)}`;

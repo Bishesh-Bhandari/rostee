@@ -11,6 +11,10 @@
     <h1>rostee</h1>
     <p class="tagline">Ask questions about your documents.</p>
     <span id="status" class="status">Checking server…</span>
+    <!-- POST, not a link: a GET logout could be triggered by any <img> tag. -->
+    <form method="post" action="/logout" class="logout">
+      <button type="submit" class="link">Log out</button>
+    </form>
   </header>
 
   <main>

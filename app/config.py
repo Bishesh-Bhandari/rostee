@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr
     llm_model: str = "gemini-2.5-flash"
 
+    # --- Login ---
+    # One shared password for the whole site, typed on the login page.
+    # Required, so the app refuses to start rather than go live without one.
+    # min_length: a short password on a public URL is guessed in minutes.
+    app_password: SecretStr = Field(min_length=8)
+    session_days: int = Field(default=7, gt=0)  # how long a login lasts
+
     # --- Embeddings & reranking ---
     dense_model: str = "BAAI/bge-small-en-v1.5"
     dense_dim: int = Field(default=384, gt=0)
@@ -68,10 +75,14 @@ class Settings(BaseSettings):
     upload_dir: Path = Path("data/uploads")
 
     # --- API ---
-    # Websites allowed to call the API from a browser. "*" = any site, fine
-    # while there's no login; set the client's frontend URL before going live.
+    # Websites allowed to call the API from a browser. "*" is still safe with
+    # the login: CORS never lets other sites send the login cookie, so their
+    # calls get a 401. Set the client's frontend URL if one ever calls the API.
     # In .env it's JSON: CORS_ORIGINS=["https://client-site.com"]
     cors_origins: list[str] = ["*"]
+    # Bigger PDFs are rejected before they're saved or read: parsing and
+    # embedding a huge file could blow past the 512 MB memory limit.
+    max_upload_mb: int = Field(default=20, gt=0)
 
     @model_validator(mode="after")
     def _check_consistency(self) -> "Settings":
