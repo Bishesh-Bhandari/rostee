@@ -55,8 +55,12 @@ class Settings(BaseSettings):
     # defaults (256 texts per batch, one thread per core) the container hit
     # 2.1 GB after one upload. Measured in Docker after 1 upload + 5 questions:
     # batch 16 / 2 threads -> 476 MB, batch 4 / 1 thread -> 412 MB, no slower.
+    # Batch 1 because a 330-page PDF still got the container killed at batch 4:
+    # the model's attention tables grow with (texts per batch) x (length)^2, so
+    # one long chunk in a batch of 4 spiked memory ~100 MB past the limit.
+    # Batch 1 also skips padding short chunks up to the longest: it was faster.
     # Raise both in .env on a machine with more RAM.
-    model_batch_size: int = Field(default=4, gt=0)  # texts per model call
+    model_batch_size: int = Field(default=1, gt=0)  # texts per model call
     model_threads: int = Field(default=1, gt=0)
 
     # --- Chunking (measured in characters, not tokens) ---

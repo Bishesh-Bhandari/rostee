@@ -53,6 +53,14 @@ Reranker(model=s.reranker_model, cache_dir=s.models_cache_dir, \
 # startup instead of quietly downloading on a client's server.
 ENV HF_HUB_OFFLINE=1
 
+# Linux's memory allocator keeps freed memory for reuse instead of giving it
+# back, so after one big upload the app stays big. These make it return memory
+# sooner: a 330-page upload ended at 385 MB instead of ~450 MB. Set here, late,
+# because it only matters at run time, and an ENV near the top would make
+# every build reinstall all packages.
+ENV MALLOC_ARENA_MAX=2 \
+    MALLOC_TRIM_THRESHOLD_=65536
+
 # The rest of the code. COPY makes files owned by root, so the app can't
 # change its own code even though it runs as the rostee user.
 COPY app/ app/
