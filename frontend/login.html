@@ -6,24 +6,19 @@
   <title>rostee · log in</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <header>
+<body class="login-page">
+  <main class="login-card">
+    <span class="logo" aria-hidden="true">R</span>
     <h1>rostee</h1>
     <p class="tagline">Ask questions about your documents.</p>
-  </header>
-
-  <main>
-    <section class="card login">
-      <h2>Log in</h2>
-      <!-- A plain form post: the server checks the password, sets the login
-           cookie and redirects, so this page works without any JavaScript. -->
-      <form method="post" action="/login">
-        <input type="password" name="password" placeholder="Password"
-               autocomplete="current-password" required autofocus>
-        <button type="submit">Log in</button>
-      </form>
-      <p id="error" class="result error" hidden>Wrong password. Try again.</p>
-    </section>
+    <!-- A plain form post: the server checks the password, sets the login
+         cookie and redirects, so this page works without any JavaScript. -->
+    <form method="post" action="/login">
+      <input type="password" name="password" placeholder="Password" aria-label="Password"
+             autocomplete="current-password" required autofocus>
+      <button type="submit" class="primary">Log in</button>
+    </form>
+    <p id="error" class="error" hidden>Wrong password. Try again.</p>
   </main>
 
   <!-- The server sends a wrong password back here as ?error=1. -->
